@@ -1,0 +1,55 @@
+---
+- name: block / rescue / always 结构演示
+  hosts: all
+  gather_facts: no
+  vars:
+    files_to_check:
+      - /opt/block
+      - /opt/rescue
+      - /opt/always
+
+  tasks:
+    # ============================================================
+    # block / rescue / always 结构
+    # ============================================================
+    - name: block / rescue / always 测试
+      block:
+        - name: 创建文件 /opt/block
+          ansible.builtin.file:
+            path: /opt/block
+            state: touch
+            mode: "0644"
+
+        # 取消下面一行的注释以模拟 block 失败，观察 rescue 效果
+        # - name: 故意让 block 失败
+        #   ansible.builtin.command: /bin/false
+
+      rescue:
+        - name: block 失败，创建文件 /opt/rescue
+          ansible.builtin.file:
+            path: /opt/rescue
+            state: touch
+            mode: "0644"
+
+      always:
+        - name: 无论结果如何，创建文件 /opt/always
+          ansible.builtin.file:
+            path: /opt/always
+            state: touch
+            mode: "0644"
+
+    # ============================================================
+    # 验证三个文件是否存在
+    # ============================================================
+    - name: 验证文件状态
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ files_to_check }}"
+      register: file_stats
+
+    - name: 输出验证报告
+      ansible.builtin.debug:
+        msg: >-
+          {% for s in file_stats.results %}
+          {{ s.stat.path | basename }}：{{ '存在' if s.stat.exists else '不存在' }}
+          {% endfor %}
