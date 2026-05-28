@@ -1,0 +1,41 @@
+---
+- name: 在非 RedHat 系统上批量创建用户
+  hosts: all
+  gather_facts: yes
+  vars:
+    base_name: xiangzhongxin
+    user_list:
+      - name: "{{ base_name }}_1"
+        uid: 2501
+      - name: "{{ base_name }}_2"
+        uid: 2502
+      - name: "{{ base_name }}_3"
+        uid: 2503
+
+  tasks:
+    # ============================================================
+    # 任务1：当 ansible_os_family 不为 RedHat 时，创建用户
+    # ============================================================
+    - name: 批量创建用户（非 RedHat 系统）
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        uid: "{{ item.uid }}"
+        home: "/home/{{ item.name }}"
+        state: present
+      loop: "{{ user_list }}"
+      when: ansible_os_family != "RedHat"
+      loop_control:
+        label: "正在创建用户：{{ item.name }} (UID: {{ item.uid }})"
+
+    # ============================================================
+    # 任务2：在 /tmp/ 下为每个用户创建对应的空文件
+    # ============================================================
+    - name: 为用户创建标识文件
+      ansible.builtin.file:
+        path: "/tmp/{{ item.name }}.txt"
+        state: touch
+        mode: "0644"
+      loop: "{{ user_list }}"
+      when: ansible_os_family != "RedHat"
+      loop_control:
+        label: "创建文件：/tmp/{{ item.name }}.txt"
