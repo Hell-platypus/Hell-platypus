@@ -1,0 +1,175 @@
+---
+- name: Ansible Loop 模块教学示例
+  hosts: localhost
+  gather_facts: no
+  vars:
+    fruits:
+      - apple
+      - banana
+      - cherry
+    users:
+      - name: alice
+        uid: 1001
+      - name: bob
+        uid: 1002
+      - name: charlie
+        uid: 1003
+
+  tasks:
+    # ============================================================
+    # 1. 最简单的 loop —— 遍历列表
+    # ============================================================
+    - name: "1. 基础 loop：遍历列表"
+      ansible.builtin.debug:
+        msg: "水果: {{ item }}"
+      loop:
+        - apple
+        - banana
+        - cherry
+
+    # ============================================================
+    # 2. loop 遍历变量中的列表
+    # ============================================================
+    - name: "2. 遍历变量中的列表"
+      ansible.builtin.debug:
+        msg: "水果: {{ item }}"
+      loop: "{{ fruits }}"
+
+    # ============================================================
+    # 3. loop 遍历字典列表
+    # ============================================================
+    - name: "3. 遍历字典列表 (使用 item.key 访问子字段)"
+      ansible.builtin.debug:
+        msg: "用户 {{ item.name }} 的 UID 是 {{ item.uid }}"
+      loop: "{{ users }}"
+
+    # ============================================================
+    # 4. loop 配合 loop_control —— 获取索引
+    # ============================================================
+    - name: "4. loop_control.index_var —— 带索引遍历"
+      ansible.builtin.debug:
+        msg: "[{{ my_idx }}] 水果: {{ item }}"
+      loop: "{{ fruits }}"
+      loop_control:
+        index_var: my_idx
+
+    # ============================================================
+    # 5. loop_control —— 自定义循环变量名 (替代默认的 item)
+    # ============================================================
+    - name: "5. loop_control.loop_var —— 自定义变量名"
+      ansible.builtin.debug:
+        msg: "水果名称: {{ fruit }}"
+      loop: "{{ fruits }}"
+      loop_control:
+        loop_var: fruit
+
+    # ============================================================
+    # 6. loop_control —— 标签 (pause / label)
+    # ============================================================
+    - name: "6. loop_control.label —— 美化输出标签"
+      ansible.builtin.debug:
+        msg: "正在处理用户 {{ item.name }}..."
+      loop: "{{ users }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    # ============================================================
+    # 7. with_items (旧式语法，但兼容)
+    # ============================================================
+    - name: "7. 旧式 with_items (功能同 loop)"
+      ansible.builtin.debug:
+        msg: "数字: {{ item }}"
+      with_items: [1, 2, 3, 4, 5]
+
+    # ============================================================
+    # 8. loop + 条件 (when)
+    # ============================================================
+    - name: "8. loop 中跳过特定元素 (when)"
+      ansible.builtin.debug:
+        msg: "处理: {{ item }}"
+      loop: "{{ fruits }}"
+      when: item != "banana"
+
+    # ============================================================
+    # 9. 遍历字典的键值对
+    # ============================================================
+    - name: "9. 遍历字典 (dict) 的键值对"
+      ansible.builtin.debug:
+        msg: "键: {{ item.key }}, 值: {{ item.value }}"
+      loop: "{{ { 'name': 'Alice', 'age': 30, 'city': 'Beijing' } | dict2items }}"
+
+    # ============================================================
+    # 10. 嵌套循环 —— loop + subelements
+    # ============================================================
+    - name: "10. 嵌套循环 (subelements)"
+      ansible.builtin.debug:
+        msg: "团队: {{ item.0.name }}, 成员: {{ item.1 }}"
+      loop: "{{ teams | subelements('members') }}"
+      vars:
+        teams:
+          - name: devops
+            members:
+              - alice
+              - bob
+          - name: backend
+            members:
+              - charlie
+              - dave
+
+    # ============================================================
+    # 11. 数字序列 —— sequence / range
+    # ============================================================
+    - name: "11. 遍历数字范围 (range)"
+      ansible.builtin.debug:
+        msg: "序号: {{ item }}"
+      loop: "{{ range(1, 6) | list }}"
+
+    # ============================================================
+    # 12. until —— 重试直到条件满足
+    # ============================================================
+    - name: "12. loop until 重试示例 (模拟)"
+      ansible.builtin.debug:
+        msg: "第 {{ item }} 次重试"
+      loop: "{{ range(1, 6) | list }}"
+      until: item > 3
+      retries: 5
+      delay: 1
+
+    # ============================================================
+    # 13. 实战：批量创建用户 (演示，dry-run 安全)
+    # ============================================================
+    - name: "13. 实战：批量创建用户 (演示用 debug，实际用 user 模块)"
+      ansible.builtin.debug:
+        msg: "创建用户 {{ item.name }} (uid={{ item.uid }})"
+      loop: "{{ users }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    # ============================================================
+    # 14. 实战：批量复制文件并修改内容
+    # ============================================================
+    - name: "14. 实战：批量创建配置文件"
+      ansible.builtin.copy:
+        dest: "/tmp/{{ item }}.conf"
+        content: |
+          # {{ item }} configuration
+          enabled = true
+          mode = auto
+      loop:
+        - nginx
+        - redis
+        - mysql
+      loop_control:
+        label: "{{ item }}.conf"
+      check_mode: yes  # 只演示，不真正执行
+
+    # ============================================================
+    # 15. pause —— 每轮循环间暂停
+    # ============================================================
+    - name: "15. loop_control.pause —— 循环间暂停 (演示跳过)"
+      ansible.builtin.debug:
+        msg: "处理 {{ item }} (暂停 0.5 秒)"
+      loop: "{{ fruits }}"
+      loop_control:
+        pause: 0.5
+      when: false  # 默认关闭，去掉 when: false 可测试
