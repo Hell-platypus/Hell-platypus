@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web  # Pod 名称：web
+spec:
+  containers:
+  - name: nginx
+    image: nginx  # 使用 nginx 镜像
+  nodeSelector:
+    disk: ssd  # 只调度到 disk=ssd 的节点
